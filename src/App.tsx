@@ -114,15 +114,40 @@ function App() {
     }
   }
 
-  // Load suggested movies on mount
+  //
+  // Fetch weather & suggested movies on load
+  //
   useEffect(() => {
-    const weatherCode = 20;
-    const temperature = 15;
-    const genre = getGenreForWeather(weatherCode, temperature);
-    fetchAllMoviesByGenre(genre).then(allMovies => {
-      console.log("Drama movies:", allMovies);
-      setSuggested(allMovies);
-    });
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const weatherRes = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+          );
+          const weatherData = await weatherRes.json();
+          const weatherCode = weatherData.current_weather.weathercode;
+          const temperature = weatherData.current_weather.temperature;
+          const genre = getGenreForWeather(weatherCode, temperature);
+          const allMovies = await fetchAllMoviesByGenre(genre);
+          setSuggested(allMovies);
+        } catch (error) {
+          console.error('Failed to fetch weather/movies:', error);
+          // Fallback to popular movies on error
+          const allMovies = await fetchAllMoviesByGenre("popular");
+          setSuggested(allMovies);
+        }
+      },
+      async () => {
+        try {
+          // Fallback if geolocation denied/fails
+          const allMovies = await fetchAllMoviesByGenre("popular");
+          setSuggested(allMovies);
+        } catch (error) {
+          console.error('Failed to fetch fallback movies:', error);
+        }
+      }
+    );
   }, []);
 
   // NEW: Close modal on Escape key
