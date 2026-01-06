@@ -1,11 +1,12 @@
-# MoodCast
+# Movie Search App
 
-A feature-rich React application for discovering movies with weather-based suggestions, Netflix-style previews, and auto-playing trailers. Your mood, your movies.
+A feature-rich React application for discovering movies with weather-based suggestions, Netflix-style previews, and auto-playing trailers.
 
 ## Features
 
 ### Core Features
 - **Movie Search** — Search movies using the OMDB API with pagination (up to 100 results)
+- **Genre Filter** — Filter movies by genre (Adventure, Mystery, Romance, Fantasy, Action, Family, Drama)
 - **Weather-Based Suggestions** — Get personalized movie recommendations based on your local weather
 - **Netflix-Style Previews** — Hover over any movie card to see an expanded preview with trailer
 - **Modern Dark Theme** — Sleek dark UI with ambient gradient backgrounds
@@ -37,7 +38,7 @@ A feature-rich React application for discovering movies with weather-based sugge
 - **Vitest** — Unit & integration testing
 - **React Testing Library** — Component testing
 - **OMDB API** — Movie search data
-- **TMDB API** — Movie trailers
+- **TMDB API** — Movie trailers & top-rated movies
 - **Open-Meteo API** — Weather data
 
 ## Getting Started
@@ -50,10 +51,10 @@ A feature-rich React application for discovering movies with weather-based sugge
 
 ```bash
 # Clone the repository
-git clone https://github.com/mohammed-albazoon/MoodCast.git
+git clone https://github.com/mohammed-albazoon/movie-search-app.git
 
 # Navigate to the project
-cd MoodCast
+cd movie-search-app
 
 # Install dependencies
 npm install
@@ -115,19 +116,20 @@ src/
 ## How It Works
 
 1. **On Load** — App requests your location, fetches weather data, and suggests movies matching the weather mood
-2. **Search** — Type a movie name and press Enter or click Search
-3. **Preview** — Hover over any card for 700ms to see the expanded preview with trailer
-4. **Watch** — Click any card to open the IMDB page
+2. **Genre Filter** — Select a genre from the dropdown to browse movies by category
+3. **Search** — Type a movie name and press Enter or click Search
+4. **Preview** — Hover over any card for 700ms to see the expanded preview with trailer
+5. **Watch** — Click any card to open the IMDB page
 
 ## API Integration
 
 - **OMDB API** — Movie search and metadata
-- **TMDB API** — YouTube trailer keys
+- **TMDB API** — YouTube trailer keys & top-rated movies
 - **Open-Meteo API** — Weather data by coordinates
 
 ## Live Demo
 
-[https://mohammed-albazoon.github.io/MoodCast](https://mohammed-albazoon.github.io/MoodCast)
+[https://mohammed-albazoon.github.io/movie-search-app](https://mohammed-albazoon.github.io/movie-search-app)
 
 ## Acknowledgements
 

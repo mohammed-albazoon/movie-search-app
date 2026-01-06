@@ -1,9 +1,9 @@
 {
-  "name": "moodcast",
+  "name": "movie-search-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://mohammed-albazoon.github.io/MoodCast",
+  "homepage": "https://mohammed-albazoon.github.io/movie-search-app",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

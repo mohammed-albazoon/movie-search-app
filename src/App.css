@@ -105,6 +105,29 @@
   color: var(--color-foreground-muted);
 }
 
+.weather-reason {
+  font-weight: 400;
+  /* color: var(--color-accent); */
+}
+
+/* No results message */
+.no-results {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-foreground-muted);
+}
+
+.no-results p {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.no-results-hint {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  margin-top: 0.5rem;
+}
+
 /* ============================================
    SEARCH BAR
    ============================================ */
@@ -114,6 +137,56 @@
   gap: 0.75rem;
   margin-bottom: 2rem;
   align-items: center;
+}
+
+.back-btn {
+  padding: 0.875rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.75rem;
+  color: var(--color-foreground);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-expo-out);
+}
+
+.back-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-hover);
+  transform: translateX(-2px);
+}
+
+.back-btn:active {
+  transform: translateX(-4px);
+}
+
+/* Genre select dropdown */
+.genre-select {
+  padding: 0.875rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.75rem;
+  color: var(--color-foreground);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-expo-out);
+  min-width: 140px;
+}
+
+.genre-select:hover {
+  border-color: var(--color-border-hover);
+  background: var(--color-surface-hover);
+}
+
+.genre-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow), var(--shadow-glow-soft);
+}
+
+.genre-select option {
+  background: var(--color-bg-elevated);
+  color: var(--color-foreground);
 }
 
 .search-input {

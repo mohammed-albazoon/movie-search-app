@@ -22,10 +22,26 @@ interface TrailerState {
 // TMDB API key from environment variable
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
+// Search history entry type
+interface SearchHistoryEntry {
+  query: string;
+  movies: Movie[];
+}
+
+// Available genres for dropdown
+const GENRES = ['adventure', 'mystery', 'romance', 'fantasy', 'action', 'family', 'drama'] as const;
+type Genre = typeof GENRES[number];
+
 function App() {
   const [query, setQuery] = useState('');
+  const [searchedQuery, setSearchedQuery] = useState(''); // The query that was actually searched
   const [movies, setMovies] = useState<Movie[]>([]);
   const [suggested, setSuggested] = useState<Movie[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]); // History stack
+  const [selectedGenre, setSelectedGenre] = useState<Genre | ''>(''); // Genre dropdown state
+  const [weatherReason, setWeatherReason] = useState<string>(''); // Why movies are suggested
   const [hoveredMovie, setHoveredMovie] = useState<Movie | null>(null);
   const [previewPosition, setPreviewPosition] = useState({ top: 0, left: 0 });
   const [previewMode, setPreviewMode] = useState<PreviewMode>('expand');  // NEW: toggle mode
@@ -48,6 +64,17 @@ function App() {
     return "drama";
   }
 
+  // Get human-readable weather description
+  function getWeatherDescription(code: number, temp: number): string {
+    if (code >= 71 && code <= 77) return "it's snowing ❄️";
+    if (code >= 51 && code <= 67) return "it's raining 🌧️";
+    if (code >= 45 && code <= 48) return "it's foggy 🌫️";
+    if (code >= 0 && code <= 3) return "it's clear and sunny ☀️";
+    if (temp >= 30) return "it's hot outside 🔥";
+    if (temp <= 5) return "it's freezing cold 🥶";
+    return "the weather is mild 🌤️";
+  }
+
   // Fetch ALL movies (handles pagination)
   async function fetchAllMoviesByGenre(genre: string) {
     let allMovies: Movie[] = [];
@@ -68,6 +95,51 @@ function App() {
     }
 
     return allMovies;
+  }
+
+  // Fetch top-rated movies from TMDB (used when location is denied)
+  async function fetchTopRatedMovies(): Promise<Movie[]> {
+    if (!TMDB_API_KEY) {
+      // Fallback to OMDB search if no TMDB key
+      return fetchAllMoviesByGenre("movie");
+    }
+
+    try {
+      const movies: Movie[] = [];
+      // Fetch 3 pages of top-rated movies
+      for (let page = 1; page <= 3; page++) {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/movie/top_rated?api_key=${TMDB_API_KEY}&page=${page}`
+        );
+        const data = await res.json();
+
+        if (data.results) {
+          // Convert TMDB format to our Movie format, then fetch OMDB data for IMDB IDs
+          for (const tmdbMovie of data.results) {
+            // Get IMDB ID from TMDB
+            const detailRes = await fetch(
+              `https://api.themoviedb.org/3/movie/${tmdbMovie.id}/external_ids?api_key=${TMDB_API_KEY}`
+            );
+            const detailData = await detailRes.json();
+
+            if (detailData.imdb_id) {
+              movies.push({
+                imdbID: detailData.imdb_id,
+                Title: tmdbMovie.title,
+                Year: tmdbMovie.release_date?.split('-')[0] || 'N/A',
+                Poster: tmdbMovie.poster_path
+                  ? `https://image.tmdb.org/t/p/w500${tmdbMovie.poster_path}`
+                  : 'N/A'
+              });
+            }
+          }
+        }
+      }
+      return movies;
+    } catch (error) {
+      console.error('Failed to fetch top-rated movies:', error);
+      return fetchAllMoviesByGenre("movie");
+    }
   }
 
   // Fetch trailer from TMDB (searches by title, then gets YouTube key)
@@ -129,20 +201,24 @@ function App() {
           const weatherCode = weatherData.current_weather.weathercode;
           const temperature = weatherData.current_weather.temperature;
           const genre = getGenreForWeather(weatherCode, temperature);
+          const weatherDesc = getWeatherDescription(weatherCode, temperature);
+          setWeatherReason(weatherDesc);
           const allMovies = await fetchAllMoviesByGenre(genre);
           setSuggested(allMovies);
         } catch (error) {
           console.error('Failed to fetch weather/movies:', error);
-          // Fallback to popular movies on error
-          const allMovies = await fetchAllMoviesByGenre("popular");
-          setSuggested(allMovies);
+          // Fallback to top-rated movies on error
+          setWeatherReason("they're top rated ⭐");
+          const topMovies = await fetchTopRatedMovies();
+          setSuggested(topMovies);
         }
       },
       async () => {
         try {
-          // Fallback if geolocation denied/fails
-          const allMovies = await fetchAllMoviesByGenre("popular");
-          setSuggested(allMovies);
+          // Fallback if geolocation denied/fails - show top-rated movies
+          setWeatherReason("they're top rated ⭐");
+          const topMovies = await fetchTopRatedMovies();
+          setSuggested(topMovies);
         } catch (error) {
           console.error('Failed to fetch fallback movies:', error);
         }
@@ -187,14 +263,25 @@ function App() {
 
   // SEARCH FUNCTION
   const handleSearch = async () => {
-    if (!query) return;
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return;
 
+    // Save current state to history before new search
+    if (hasSearched && searchedQuery) {
+      setSearchHistory(prev => [...prev, { query: searchedQuery, movies }]);
+    }
+
+    setMovies([]); // Clear previous results before new search
+    setSearchedQuery(trimmedQuery); // Store the query being searched
+    setHasSearched(true);
+    setIsSearching(true);
+    setSelectedGenre(''); // Reset genre dropdown when searching
     let allMovies: Movie[] = [];
     let page = 1;
 
     while (true) {
       const response = await fetch(
-        `https://www.omdbapi.com/?apikey=thewdb&s=${query}&page=${page}`
+        `https://www.omdbapi.com/?apikey=thewdb&s=${trimmedQuery}&page=${page}`
       );
       const data = await response.json();
 
@@ -207,6 +294,50 @@ function App() {
     }
 
     setMovies(allMovies);
+    setIsSearching(false);
+  };
+
+  // Handle genre selection from dropdown
+  const handleGenreSelect = async (genre: Genre | '') => {
+    setSelectedGenre(genre);
+
+    // If "All Genres" selected, reset to suggestions view
+    if (!genre) {
+      setMovies([]);
+      setHasSearched(false);
+      setQuery('');
+      setSearchedQuery('');
+      return;
+    }
+
+    // Fetch movies for the selected genre
+    setIsSearching(true);
+    setHasSearched(true);
+    setSearchedQuery(genre);
+    setMovies([]);
+
+    const genreMovies = await fetchAllMoviesByGenre(genre);
+    setMovies(genreMovies);
+    setIsSearching(false);
+  };
+
+  // Go back to previous search or suggestions
+  const handleBack = () => {
+    if (searchHistory.length > 0) {
+      // Pop the last entry from history
+      const previousSearch = searchHistory[searchHistory.length - 1];
+      setSearchHistory(prev => prev.slice(0, -1));
+      setMovies(previousSearch.movies);
+      setSearchedQuery(previousSearch.query);
+      setQuery(previousSearch.query);
+    } else {
+      // No history - go back to suggestions
+      setMovies([]);
+      setQuery('');
+      setSearchedQuery('');
+      setHasSearched(false);
+      setSelectedGenre(''); // Reset genre dropdown
+    }
   };
 
   // Open IMDb trailer/video page
@@ -475,9 +606,30 @@ function App() {
 
       {/* Main content */}
       <div className="app-content">
-        <h1 className="app-title text-gradient">MoodCast</h1>
+        <h1 className="app-title text-gradient">Movie Search App</h1>
 
         <div className="search-bar">
+          {/* Back button - shows when user has searched */}
+          {hasSearched && (
+            <button className="back-btn" onClick={handleBack} title="Go back">
+              ←
+            </button>
+          )}
+
+          {/* Genre dropdown */}
+          <select
+            className="genre-select"
+            value={selectedGenre}
+            onChange={(e) => handleGenreSelect(e.target.value as Genre | '')}
+          >
+            <option value="">All Genres</option>
+            {GENRES.map((genre) => (
+              <option key={genre} value={genre}>
+                {genre.charAt(0).toUpperCase() + genre.slice(1)}
+              </option>
+            ))}
+          </select>
+
           <input
             type="text"
             className="search-input"
@@ -507,15 +659,27 @@ function App() {
           </div>
         </div>
 
-        {movies.length === 0 && suggested.length > 0 && (
+        {/* No results message - only show when search is complete and no results */}
+        {hasSearched && !isSearching && movies.length === 0 && (
+          <div className="no-results">
+            <p>No movies found for "{searchedQuery}"</p>
+            <p className="no-results-hint">Try a different search term</p>
+          </div>
+        )}
+
+        {/* Suggested movies (only when no search performed) */}
+        {!hasSearched && movies.length === 0 && suggested.length > 0 && (
           <>
-            <h2 className="section-title">Suggested for you</h2>
+            <h2 className="section-title">
+              Suggested for you{weatherReason && <span className="weather-reason"> because {weatherReason}</span>}
+            </h2>
             <div className="movies-grid">
               {suggested.map((movie, index) => renderCard(movie, index))}
             </div>
           </>
         )}
 
+        {/* Search results */}
         {movies.length > 0 && (
           <div className="movies-grid">
             {movies.map((movie, index) => renderCard(movie, index))}
